@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Krita/PythonPlugin
+X-KDE-Library=multilayerfilter
+X-Python-2-Compatible=false
+X-Krita-Manual=Manual.html
+Name=MultiLayerFilter
+Name[ja]=複数レイヤーHSV調整
+Comment=Plugin to applies HSV adjustments to multiple layers
+Comment[ja]=複数レイヤーに対してHSV調整するプラグイン
