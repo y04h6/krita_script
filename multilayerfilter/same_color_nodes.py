@@ -50,7 +50,7 @@ def __findDominantColor(layer):
     if layer is not None and layer.type() == 'paintlayer':
         width = doc.width()
         height = doc.height()
-        dominantColor = __findDominantColorBfs(layer, 4**6, width, height)
+        dominantColor = __findDominantColorBfs(layer, 4**8, width, height)
         
         if dominantColor is not None:
             print(f"代表的な色: RGB{dominantColor}")

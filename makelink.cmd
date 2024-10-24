@@ -1,0 +1,2 @@
+mklink /d "%USERPROFILE%\AppData\Roaming\krita\pykrita\multilayerfilter" "E:\Projects\krita_script\multilayerfilter"
+copy"E:\Projects\krita_script\krita_script\multilayerfilter.desktop"  "%USERPROFILE%\AppData\Roaming\krita\pykrita\" 

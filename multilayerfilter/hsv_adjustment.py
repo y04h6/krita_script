@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
 from krita import *
 from .same_color_nodes import *
+import time
 
 RESOLUSION=100
 logString=""
@@ -18,35 +19,38 @@ def applyMask(maskNode):
         # フィルタマスクの親レイヤーを取得
         layer = maskNode.parentNode()
 
-        doc.setActiveNode(layer)  # アクティブにする
-        app.action('flatten_layer').trigger()  # マスクを統合
-        printLog(f"{layer.name()} にフィルタマスクが適用され、レイヤーに統合されました。")
-
-        def apply_mask_recursively(layers, mask):
-            for layer in layers:
-                if layer.type() == 'paintlayer':
-                    
-                    # フィルタマスクをコピー
-                    new_mask = mask.duplicate()
-                    # ペイントレイヤーにマスクを適用
-                    layer.addChildNode(new_mask, None)
-                    printLog(f"フィルタマスクが {layer.name()} にコピーされました。")
-                    
-                    # レイヤーをフラット化（マスクを統合）
-                    doc.setActiveNode(layer)  # アクティブにする
-                    app.action('flatten_layer').trigger()  # マスクを統合
-                    printLog(f"{layer.name()} にフィルタマスクが適用され、レイヤーに統合されました。")
-                    
-                elif layer.type() == 'grouplayer':
-                    # グループレイヤーの場合、その中のレイヤーに再帰的に適用
-                    apply_mask_recursively(layer.childNodes(), mask)
-        
-        # フィルタマスクを兄弟レイヤーに再帰的に適用
-        apply_mask_recursively(layer.childNodes(), maskNode)
-        
-        # 元のフィルタマスクを削除
-        layer.removeChildNode(maskNode)
-        printLog(f"{layer.name()} から元のフィルタマスクが削除されました。")
+        if layer.type() == 'paintlayer':
+            # レイヤーをフラット化（マスクを統合）
+            doc.setActiveNode(layer)  # アクティブにする
+            app.action('flatten_layer').trigger()  # マスクを統合
+            printLog(f"{layer.name()} にフィルタマスクが適用され、レイヤーに統合されました。")
+            
+        elif layer.type() == 'grouplayer':
+            def apply_mask_recursively(layers, mask):
+                for layer in layers:
+                    if layer.type() == 'paintlayer':
+                        
+                        # フィルタマスクをコピー
+                        new_mask = mask.duplicate()
+                        # ペイントレイヤーにマスクを適用
+                        layer.addChildNode(new_mask, None)
+                        printLog(f"フィルタマスクが {layer.name()} にコピーされました。")
+                        
+                        # レイヤーをフラット化（マスクを統合）
+                        doc.setActiveNode(layer)  # アクティブにする
+                        app.action('flatten_layer').trigger()  # マスクを統合
+                        printLog(f"{layer.name()} にフィルタマスクが適用され、レイヤーに統合されました。")
+                        
+                    elif layer.type() == 'grouplayer':
+                        # グループレイヤーの場合、その中のレイヤーに再帰的に適用
+                        apply_mask_recursively(layer.childNodes(), mask)
+            
+            # フィルタマスクを兄弟レイヤーに再帰的に適用
+            apply_mask_recursively(layer.childNodes(), maskNode)
+            
+            # 元のフィルタマスクを削除
+            layer.removeChildNode(maskNode)
+            printLog(f"{layer.name()} から元のフィルタマスクが削除されました。")
     else:
         printLog("選択されたノードはフィルタマスクではありません。")
 
@@ -124,6 +128,11 @@ class HSVAdjustmentDialog(QDialog):
 
         self.checkboxColorize = QCheckBox("Colorize", self)
 
+        # 更新を遅延させるためのタイマー
+        self.update_timer = QTimer()
+        self.update_timer.setSingleShot(True)
+        self.update_timer.timeout.connect(self.update_hsv)
+
         # ボタンを作成
         self.resetButton = QPushButton('Reset', self)
         self.applyButton = QPushButton('Apply', self)
@@ -155,12 +164,12 @@ class HSVAdjustmentDialog(QDialog):
         self.setLayout(layout)
 
         # スライダーの値が変更されたときのイベント
-        self.hueSlider.valueChanged.connect(self.update_hsv)
-        self.saturationSlider.valueChanged.connect(self.update_hsv)
-        self.valueSlider.valueChanged.connect(self.update_hsv)
+        self.hueSlider.valueChanged.connect(self.schedule_update)
+        self.saturationSlider.valueChanged.connect(self.schedule_update)
+        self.valueSlider.valueChanged.connect(self.schedule_update)
         self.resetButton.clicked.connect(self.resetParam)
         self.applyButton.clicked.connect(self.apply_adjustment)
-        self.checkboxColorize.stateChanged.connect(self.update_hsv)
+        self.checkboxColorize.stateChanged.connect(self.schedule_update)
         self.closeEvent = self.cancel
 
         # フィルターマスク作成
@@ -189,6 +198,10 @@ class HSVAdjustmentDialog(QDialog):
         self.valueSlider.setValue(0)
         self.checkboxColorize.setCheckState(Qt.Unchecked)
 
+    def schedule_update(self):
+        """スライダー操作時に遅延して更新をスケジュール"""
+        self.update_timer.start(200)  # 200ms待機してから更新
+
     def update_hsv(self):
         # スライダーの現在値を取得
         hue_shift = self.hueSlider.value()
@@ -211,6 +224,7 @@ class HSVAdjustmentDialog(QDialog):
         self.doc.refreshProjection()
 
     def apply_adjustment(self):
+        self.update_hsv()
         for mask in self.maskList:
             mask.merge()
         # ドキュメントを更新
