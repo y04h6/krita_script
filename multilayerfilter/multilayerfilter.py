@@ -2,6 +2,7 @@
 
 from krita import Extension
 from .hsv_adjustment import *
+from .mask_recurcive_apply import *
 
 class Multilayerfilter(Extension):
 
@@ -18,4 +19,6 @@ class Multilayerfilter(Extension):
         action.triggered.connect(hsvAdjustForSelectNodes)
         action = window.createAction('pykrita_multilayerfilterSameColor', i18n('同色レイヤーHSV調整'), "tools/scripts")
         action.triggered.connect(hsvAdjustForSameColorNodes)
+        action = window.createAction('pykrita_applyMask', i18n('マスクレイヤーを子レイヤーに反映'), "tools/scripts")
+        action.triggered.connect(applyActiveMask)
 
